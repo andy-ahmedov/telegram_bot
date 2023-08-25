@@ -1,0 +1,5 @@
+.env
+fiz_lica.xml
+.database/*
+catalog.pdf
+bot.db

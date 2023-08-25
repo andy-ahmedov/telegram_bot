@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  bot:
+    container_name: boston
+    build: ./
+    # command: ./wait-for-postgres.sh db ./bin/bot
+    # command: ./wait-for-postgres.sh db ./bot
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=telegram_bot
+      - SSL_MODE=disable
+      - TOKEN=${TOKEN}
+      - PATH_TO_XML=fiz_lica.xml
+      - SMS_API=${SMS_API}
+  db:
+    # image: postgres:latest
+    build: ./db/
+    container_name: postgres_boston
+    ports:
+      - "5436:5432"
+    restart: always
+    volumes:
+    - ./.database/postgres/data:/var/lib/postgresql/data
+    - ./db:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=telegram_bot
+      - SSL_MODE=disable
