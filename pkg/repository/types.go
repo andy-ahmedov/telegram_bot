@@ -28,10 +28,12 @@ type TokenStorage interface {
 }
 
 type ClientStorage interface {
-	DownloadDB(file string) error
+	DownloadDB(file string, tableName string) error
 	FindNumber(phoneNumber string) (bool, error)
 	ExistInClientRep(number string) (bool, error)
+	CreateTable(tableName string, createTableCode string) error
 	GetBonus(chatID int64, phoneNumber string) (int, error)
+	UpdateDB(sqlCode string, file string) error
 }
 
 type UserStorage interface {

@@ -19,6 +19,8 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
 	cfg, err := config.Init()
 	if err != nil {
 		log.Fatal(err)

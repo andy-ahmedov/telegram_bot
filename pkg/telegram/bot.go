@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/andy-ahmedov/telegram_bot/pkg/config"
 	"github.com/andy-ahmedov/telegram_bot/pkg/repository"
@@ -39,15 +40,21 @@ func (b *Bot) Start() error {
 
 	isEmpty, err := b.checkTableIsEmpty("client_repository")
 	if isEmpty {
-		err = b.clientStorage.DownloadDB(b.cfg.PathToXml)
+		err = b.clientStorage.DownloadDB(b.cfg.PathToXml, "client_repository")
 		if err != nil {
 			return b.initErrorHandling(errDecodeXML, err)
 		} else {
 			log.Println("Database successfully uploaded")
+			err := os.Remove(b.cfg.PathToXml)
+			if err != nil {
+				return b.initErrorHandling(nil, err)
+			}
 		}
 	} else {
 		log.Println("Db upload canceled")
 	}
+
+	go b.updateClientRep(b.cfg.PathToXml)
 
 	updates, err := b.initUpdatesChannel()
 	if err != nil {
@@ -75,6 +82,33 @@ func (b *Bot) sendText(chatID int64, text string) error {
 	}
 
 	return nil
+}
+
+func (b *Bot) updateClientRep(fileName string) {
+	for {
+		if _, err := os.Stat(fileName); os.IsNotExist(err) {
+			continue
+		} else {
+			err := b.clientStorage.CreateTable("client_repository_new", b.cfg.CreateTable)
+			if err != nil {
+				b.initErrorHandling(errExecDB, err)
+				return
+			}
+
+			err = b.clientStorage.DownloadDB(fileName, "client_repository_new")
+			if err != nil {
+				b.initErrorHandling(errExecDB, err)
+				return
+			}
+
+			err = b.clientStorage.UpdateDB(b.cfg.ChangeTable, b.cfg.PathToXml)
+			if err != nil {
+				b.initErrorHandling(errExecDB, err)
+				return
+			}
+		}
+
+	}
 }
 
 func (b *Bot) checkTableIsEmpty(tableName string) (bool, error) {

@@ -15,12 +15,13 @@ WORKDIR /github.com/andy-ahmedov/telegram_bot/
 #--------------------------
 RUN GOOS=linux go build -o ./.bin/bot ./cmd/bot/main.go
 
-FROM alpine:latest
+FROM alpine:3.17
 WORKDIR /root/
 COPY --from=0 /github.com/andy-ahmedov/telegram_bot/.bin/bot .
 COPY --from=0 /github.com/andy-ahmedov/telegram_bot/configs configs/
 COPY --from=0 /github.com/andy-ahmedov/telegram_bot/wait-for-postgres.sh .
-COPY --from=0 /github.com/andy-ahmedov/telegram_bot/fiz_lica.xml .
+# COPY --from=0 /github.com/andy-ahmedov/telegram_bot/shared_files/fiz_lica.xml root/shared_files/
+# COPY --from=0 /github.com/andy-ahmedov/telegram_bot/shared_files/catalog.xml root/shared_files/
 RUN apk update &&\
 	apk add postgresql-client
 RUN chmod +x wait-for-postgres.sh

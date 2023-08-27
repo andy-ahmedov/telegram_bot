@@ -7,8 +7,13 @@ port: "5432"
 sms_link: "https://sms.ru/sms/send?api_id=%s&to=%s&msg=%s&json=1"
 discounts_url: "https://bostonwears.ru/discounts"
 balance: "Текущий баланс: %s"
-catalog_file: "catalog.pdf"
+catalog_file: "/root/shared_files/catalog.pdf"
+path_to_xml: "/root/shared_files/fiz_lica.xml"
 delimiter: "--------------------------------\n"
+
+
+change_request: "BEGIN; ALTER TABLE client_repository RENAME TO client_repository_old; ALTER TABLE client_repository_new RENAME TO client_repository; COMMIT;"
+create_table: "CREATE TABLE IF NOT EXISTS client_repository_new (id SERIAL PRIMARY KEY, client_name VARCHAR(60), phone_number VARCHAR(20) NOT NULL, bonus INT NOT NULL);"
 
 reserved_words:
   store_addr:

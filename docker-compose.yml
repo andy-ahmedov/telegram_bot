@@ -5,16 +5,18 @@ services:
     container_name: boston
     build: ./
     # command: ./wait-for-postgres.sh db ./bin/bot
-    # command: ./wait-for-postgres.sh db ./bot
+    command: ./wait-for-postgres.sh db ./bot
     depends_on:
       - db
+    volumes:
+      - ./shared_files:/root/shared_files
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=telegram_bot
       - SSL_MODE=disable
       - TOKEN=${TOKEN}
-      - PATH_TO_XML=fiz_lica.xml
+      - PATH_TO_XML=/root/shared_files/fiz_lica.xml
       - SMS_API=${SMS_API}
   db:
     # image: postgres:latest

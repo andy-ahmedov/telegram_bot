@@ -10,8 +10,10 @@ type Config struct {
 	UserName      string
 	DBname        string
 	SMSapi        string
-	PathToXml     string
 	Sslmode       string
+	PathToXml     string `mapstructure:"path_to_xml"`
+	CreateTable   string `mapstructure:"create_table"`
+	ChangeTable   string `mapstructure:"change_request"`
 	Port          string `mapstructure:"port"`
 	Host          string `mapstructure:"host"`
 	Delimiter     string `mapstructure:"delimiter"`
