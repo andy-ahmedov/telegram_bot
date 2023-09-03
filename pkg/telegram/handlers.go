@@ -1,8 +1,6 @@
 package telegram
 
 import (
-	"log"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -25,7 +23,7 @@ func (b *Bot) handleUpdates(updates tgbotapi.UpdatesChannel) {
 }
 
 func (b *Bot) handleCommand(message *tgbotapi.Message) error {
-	log.Printf("[%s]: %s", message.From.UserName, message.Text)
+	b.logs.Infof("[%s]: %s", message.From.UserName, message.Text)
 
 	switch message.Command() {
 	case commandStart:
@@ -58,7 +56,7 @@ func (b *Bot) handleCommand(message *tgbotapi.Message) error {
 }
 
 func (b *Bot) handleMessage(message *tgbotapi.Message) {
-	log.Printf("[%s]: %s", message.From.UserName, message.Text)
+	b.logs.Infof("[%s]: %s", message.From.UserName, message.Text)
 
 	if thisCode(message.Text) || thisNumber(message.Text) {
 		_, err := b.initAuthorizationProcess(message)

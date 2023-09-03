@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/andy-ahmedov/telegram_bot/pkg/logging"
 	"github.com/spf13/viper"
 )
 
@@ -86,69 +87,82 @@ type Responses struct {
 	StartWhenAuth string `mapstructure:"start_already_logged"`
 }
 
-func Init() (*Config, error) {
+func Init(logger *logging.Logger) (*Config, error) {
 	viper.AddConfigPath("configs")
 	viper.SetConfigName("main")
 
 	if err := viper.ReadInConfig(); err != nil {
+		logger.Error("Ошибка в функции viper.ReadInConfig:", err)
 		return nil, err
 	}
 
 	var cfg Config
 
 	if err := viper.Unmarshal(&cfg); err != nil {
+		logger.Error("Ошибка в функции viper.Unmarshal:", err)
 		return nil, err
 	}
 
 	if err := viper.UnmarshalKey("messages.responses", &cfg.Messages.Responses); err != nil {
+		logger.Error("Ошибка в функции viper.UnmarshalKey:", err)
 		return nil, err
 	}
 
 	if err := viper.UnmarshalKey("messages.errors", &cfg.Messages.Errors); err != nil {
+		logger.Error("Ошибка в функции viper.UnmarshalKey:", err)
 		return nil, err
 	}
 
 	if err := viper.UnmarshalKey("messages.addresses", &cfg.Messages.Addresses); err != nil {
+		logger.Error("Ошибка в функции viper.UnmarshalKey:", err)
 		return nil, err
 	}
 
 	if err := viper.UnmarshalKey("reserved_words.store_addr", &cfg.ReservWrds.StoreAddr); err != nil {
+		logger.Error("Ошибка в функции viper.UnmarshalKey:", err)
 		return nil, err
 	}
 
-	if err := parseEnv(&cfg); err != nil {
+	if err := parseEnv(&cfg, logger); err != nil {
 		return nil, err
 	}
 
 	return &cfg, nil
 }
 
-func parseEnv(cfg *Config) error {
+func parseEnv(cfg *Config, logger *logging.Logger) error {
 	if err := viper.BindEnv("token"); err != nil {
+		logger.Error("Ошибка в функции viper.BindEnv:", err)
 		return err
 	}
 
 	if err := viper.BindEnv("POSTGRES_PASSWORD"); err != nil {
+		logger.Error("Ошибка в функции viper.BindEnv:", err)
 		return err
 	}
 
 	if err := viper.BindEnv("POSTGRES_USER"); err != nil {
+		logger.Error("Ошибка в функции viper.BindEnv:", err)
 		return err
 	}
 
 	if err := viper.BindEnv("POSTGRES_DB"); err != nil {
+		logger.Error("Ошибка в функции viper.BindEnv:", err)
 		return err
 	}
 
 	if err := viper.BindEnv("sms_api"); err != nil {
+		logger.Error("Ошибка в функции viper.BindEnv:", err)
 		return err
 	}
 
 	if err := viper.BindEnv("path_to_xml"); err != nil {
+		logger.Error("Ошибка в функции viper.BindEnv:", err)
 		return err
 	}
 
 	if err := viper.BindEnv("ssl_mode"); err != nil {
+		logger.Error("Ошибка в функции viper.BindEnv:", err)
 		return err
 	}
 

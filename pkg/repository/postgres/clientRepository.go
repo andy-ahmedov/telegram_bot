@@ -4,25 +4,29 @@ import (
 	"database/sql"
 	"encoding/xml"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/andy-ahmedov/telegram_bot/pkg/logging"
 	"github.com/andy-ahmedov/telegram_bot/pkg/repository"
 	_ "github.com/lib/pq"
 )
 
 type ClientRepository struct {
 	clientDB *sql.DB
+	logger   *logging.Logger
 }
 
-func NewClientRepository(clientDB *sql.DB) *ClientRepository {
-	return &ClientRepository{clientDB: clientDB}
+func NewClientRepository(clientDB *sql.DB, logger *logging.Logger) *ClientRepository {
+	return &ClientRepository{
+		clientDB: clientDB,
+		logger:   logger,
+	}
 }
 
 func (c *ClientRepository) DownloadDB(file string, tableName string) error {
 	xmlData, err := os.Open(file)
 	if err != nil {
-		log.Fatal("Error opening client databasef file: ", err)
+		c.logger.Fatal("Error opening client databasef file: ", err)
 	}
 
 	var catalogObject repository.CatalogObject
@@ -35,12 +39,12 @@ func (c *ClientRepository) DownloadDB(file string, tableName string) error {
 			if se.Name.Local == repository.CatalogObjectName {
 				err := d.DecodeElement(&catalogObject, &se)
 				if err != nil {
-					log.Fatal("Cannot decode xml object : ", err)
+					c.logger.Fatal("Cannot decode xml object : ", err)
 				}
 				request := fmt.Sprintf("INSERT INTO %s (client_name, phone_number, bonus) VALUES ($1, $2, 0)", tableName)
 				_, err = c.clientDB.Exec(request, catalogObject.Surname, catalogObject.ContInfo.PhoneNumber)
 				if err != nil {
-					log.Fatal(err)
+					c.logger.Fatal("Error converting XML to table", err)
 				}
 				i++
 			}
@@ -51,7 +55,7 @@ func (c *ClientRepository) DownloadDB(file string, tableName string) error {
 
 func (c *ClientRepository) FindNumber(phoneNumber string) (bool, error) {
 	request := "SELECT * FROM client_repository WHERE phone_number ILIKE $1"
-	log.Println("Введенный номер: ", phoneNumber)
+	c.logger.Info("Введенный номер: ", phoneNumber)
 
 	id, bonus := 0, 0
 	client_name, phone := "", ""
@@ -61,12 +65,13 @@ func (c *ClientRepository) FindNumber(phoneNumber string) (bool, error) {
 		}
 		return false, fmt.Errorf("error: %v", err)
 	}
-	log.Println(client_name, phone)
+	c.logger.Info(client_name, " -> ", phone)
 	return true, nil
 }
 
 func (c *ClientRepository) GetBonus(chatID int64, phoneNumber string) (int, error) {
 	if phoneNumber == "79991946655" { // ДЛЯ ТЕСТА
+		c.logger.Info("Взяты тестовые значения бонусов для номера 79991946655")
 		return 168, nil // ДЛЯ ТЕСТА
 	} // ДЛЯ ТЕСТА
 
@@ -77,8 +82,10 @@ func (c *ClientRepository) GetBonus(chatID int64, phoneNumber string) (int, erro
 	err := row.Scan(&bonus)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			c.logger.Info("Бонусы по номеру ", phoneNumber, " не найдены")
 			return -1, nil
 		}
+		c.logger.Error("Ошибка в функции row.Scan ", err)
 		return -1, err
 	}
 	return bonus, nil
@@ -86,6 +93,7 @@ func (c *ClientRepository) GetBonus(chatID int64, phoneNumber string) (int, erro
 
 func (c *ClientRepository) ExistInClientRep(number string) (bool, error) {
 	if number == "79991946655" { // ДЛЯ ТЕСТА
+		c.logger.Info("Сымитировано наличие номера 79991946655 в базе данных клиентов")
 		return true, nil // ДЛЯ ТЕСТА
 	} // ДЛЯ ТЕСТА
 
@@ -96,53 +104,55 @@ func (c *ClientRepository) ExistInClientRep(number string) (bool, error) {
 	err := row.Scan(&name)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			c.logger.Info("Номер ", number, " не найден в базе клиентов")
 			return false, nil
 		}
+		c.logger.Error("Ошибка в функции row.Scan ", err)
 		return false, err
 	}
 
 	return true, nil
 }
 
-func (c *ClientRepository) tableExists(tableName string) (bool, error) {
-	query := fmt.Sprintf("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s);", tableName)
-	var exists bool
-	err := c.clientDB.QueryRow(query).Scan(&exists)
-	if err != nil {
-		log.Println(err)
-		return false, err
-	}
-	return exists, nil
-}
+// func (c *ClientRepository) tableExists(tableName string) (bool, error) {
+// 	query := fmt.Sprintf("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = %s);", tableName)
+// 	var exists bool
+// 	err := c.clientDB.QueryRow(query).Scan(&exists)
+// 	if err != nil {
+// 		c.logger.Error("Ошибка в функции c.clientDB.QueryRow.Scan", err)
+// 		return false, err
+// 	}
+// 	return exists, nil
+// }
 
 func (c *ClientRepository) CreateTable(tableName string, createTableCode string) error {
 	_, err := c.clientDB.Exec(createTableCode)
 	if err != nil {
-		log.Println(err)
+		c.logger.Error("Ошибка при создании таблицы ", err)
 		return err
 	}
 	return nil
 }
 
 func (c *ClientRepository) UpdateDB(sqlCode string, file string) error {
-	log.Println("Begin rename tables")
+	c.logger.Info("Процесс переименования таблиц")
 
 	_, err := c.clientDB.Exec(sqlCode)
 	if err != nil {
-		log.Println(err)
+		c.logger.Error("Ошибка в функции c.clientDB.exec: ", err)
 		return err
 	}
 
 	err = os.Remove(file)
 	if err != nil {
-		log.Println(err)
+		c.logger.Error("Ошибка в функции os.Remove ", err)
 		return err
 	}
-	log.Println("Client DB successfully updated!")
+	c.logger.Info("База данных клиентов успешно обновлена!")
 
 	_, err = c.clientDB.Exec("DROP TABLE client_repository_old;")
 	if err != nil {
-		log.Println(err)
+		c.logger.Error("Ошибка в функции c.clientDB.exec ", err)
 		return err
 	}
 

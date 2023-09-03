@@ -3,10 +3,10 @@ package telegram
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/andy-ahmedov/telegram_bot/pkg/config"
+	"github.com/andy-ahmedov/telegram_bot/pkg/logging"
 	"github.com/andy-ahmedov/telegram_bot/pkg/repository"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -18,6 +18,7 @@ type Bot struct {
 	userStorage   repository.UserStorage
 	errorStruct   *ErrorStruct
 	cfg           config.Config
+	logs          *logging.Logger
 }
 
 type ErrorStruct struct {
@@ -25,18 +26,19 @@ type ErrorStruct struct {
 	name error
 }
 
-func NewBot(bot *tgbotapi.BotAPI, ts repository.TokenStorage, cs repository.ClientStorage, us repository.UserStorage, cfg config.Config) *Bot {
+func NewBot(bot *tgbotapi.BotAPI, ts repository.TokenStorage, cs repository.ClientStorage, us repository.UserStorage, cfg config.Config, logger *logging.Logger) *Bot {
 	return &Bot{
 		bot:           bot,
 		tokenStorage:  ts,
 		clientStorage: cs,
 		userStorage:   us,
 		cfg:           cfg,
+		logs:          logger,
 	}
 }
 
 func (b *Bot) Start() error {
-	log.Printf("Authorized on account: %s", b.bot.Self.UserName)
+	b.logs.Infof("Authorized on account: %s", b.bot.Self.UserName)
 
 	isEmpty, err := b.checkTableIsEmpty("client_repository")
 	if isEmpty {
@@ -44,20 +46,21 @@ func (b *Bot) Start() error {
 		if err != nil {
 			return b.initErrorHandling(errDecodeXML, err)
 		} else {
-			log.Println("Database successfully uploaded")
+			b.logs.Info("Database successfully uploaded")
 			err := os.Remove(b.cfg.PathToXml)
 			if err != nil {
 				return b.initErrorHandling(nil, err)
 			}
 		}
 	} else {
-		log.Println("Db upload canceled")
+		b.logs.Info("Db upload canceled")
 	}
 
 	go b.updateClientRep(b.cfg.PathToXml)
 
 	updates, err := b.initUpdatesChannel()
 	if err != nil {
+		b.logs.Error("Ошибка в функции b.initUpdatesChannel ", err)
 		return err
 	}
 
@@ -115,6 +118,7 @@ func (b *Bot) checkTableIsEmpty(tableName string) (bool, error) {
 	postgresInfo := fmt.Sprintf(b.cfg.ConnectDB, b.cfg.Host, b.cfg.Port, b.cfg.UserName, b.cfg.PasswordDB, b.cfg.DBname, b.cfg.Sslmode)
 	db, err := sql.Open("postgres", postgresInfo)
 	if err != nil {
+		b.logs.Error("Ошибка в функции sql.Open ", err)
 		return false, err
 	}
 	defer db.Close()
@@ -123,6 +127,7 @@ func (b *Bot) checkTableIsEmpty(tableName string) (bool, error) {
 	var exists bool
 	err = db.QueryRow(query).Scan(&exists)
 	if err != nil {
+		b.logs.Error("Ошибка в функции db.QueryRow(query).Scan(&exists) ", err)
 		return false, err
 	}
 	return !exists, nil

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -80,6 +79,7 @@ func (b *Bot) checkUserStatus(message *tgbotapi.Message) string {
 
 func (b *Bot) phoneVerificationProcess(chatID int64, message *tgbotapi.Message) error {
 	verificationCode := generateVerificationCode()
+	b.logs.Info("Код подвтерждения для номера ", message.Text, " -> ", verificationCode)
 
 	// if message.Text == "79991946655" { // ДЛЯ ЭКОНОМИИ ДЕНЕГ
 	// 	b.userStorage.Save(chatID, "phone_number", message.Text) // ДЛЯ ЭКОНОМИИ ДЕНЕГ
@@ -156,20 +156,23 @@ func (b *Bot) sendSMStoPhoneNumber(phoneNumber string, code string) error {
 	requestLink := fmt.Sprintf(b.cfg.SMSlink, b.cfg.SMSapi, phoneNumber, code)
 	req, err := http.NewRequest("GET", requestLink, nil)
 	if err != nil {
+		b.logs.Error("Ошибка в функции http.NewRequest ", err)
 		return err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
+		b.logs.Error("Ошибка в функции client.Do ", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		b.logs.Error("Ошибка в функции ioutil.ReadAll ", err)
 		return err
 	}
-	log.Println(string(body))
+	b.logs.Info(string(body))
 
 	return nil
 }
@@ -193,6 +196,7 @@ func (b *Bot) getAccessToken(chatID int64) (string, error) {
 	}
 
 	if phoneNumber == "" {
+		b.logs.Info("Номер не найден")
 		return "", nil
 	}
 
@@ -211,7 +215,7 @@ func (b *Bot) createAccessToken() (string, error) {
 
 	hashString := hex.EncodeToString(hash[:])
 
-	fmt.Println("Уникальный хеш-ключ:", hashString)
+	b.logs.Info("Сгенерирован уникальный хеш-ключ")
 
 	return hashString, nil
 }

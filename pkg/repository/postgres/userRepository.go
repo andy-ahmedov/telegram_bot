@@ -2,19 +2,23 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"reflect"
 
+	"github.com/andy-ahmedov/telegram_bot/pkg/logging"
 	_ "github.com/lib/pq"
 )
 
 type UserRepository struct {
 	userDB *sql.DB
+	logger *logging.Logger
 }
 
-func NewUserRepository(userDB *sql.DB) *UserRepository {
-	return &UserRepository{userDB: userDB}
+func NewUserRepository(userDB *sql.DB, logger *logging.Logger) *UserRepository {
+	return &UserRepository{
+		userDB: userDB,
+		logger: logger,
+	}
 }
 
 func (u *UserRepository) GetNumber(chatID int64) (string, error) {
@@ -27,6 +31,7 @@ func (u *UserRepository) GetNumber(chatID int64) (string, error) {
 		if err == sql.ErrNoRows {
 			return "", nil
 		}
+		u.logger.Error("Ошибка в функции row.Scan ", err)
 		return "", err
 	}
 	return number, nil
@@ -50,6 +55,7 @@ func (u *UserRepository) Save(chatID int64, fieldName string, data interface{}) 
 		}
 
 	} else if err != nil {
+		u.logger.Error("Ошибка в функции row.Scan ", err)
 		return err
 
 	} else {
@@ -79,12 +85,14 @@ func (u *UserRepository) UpdateQuery(chatID int64, field_name string, data inter
 
 	stmt, err := u.userDB.Prepare(query)
 	if err != nil {
+		u.logger.Error("Ошибка в функции u.userDB.Prepare ", err)
 		return err
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(dataValue.Interface(), int(chatID))
 	if err != nil {
+		u.logger.Error("Ошибка в функции stmt.Exec ", err)
 		return err
 	}
 
@@ -107,12 +115,14 @@ func (u *UserRepository) InsertQuery(chatID int64, field_name string, data inter
 
 	stmt, err := u.userDB.Prepare(query)
 	if err != nil {
+		u.logger.Error("Ошибка в функции u.userDB.Prepare ", err)
 		return err
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(int(chatID), dataValue.Interface())
 	if err != nil {
+		u.logger.Error("Ошибка в функции stmt.Exec ", err)
 		return err
 	}
 
@@ -127,8 +137,8 @@ func (u *UserRepository) GetCode(chatID int64) (string, error) {
 	err := row.Scan(&code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			er := fmt.Sprint("Code not found")
-			return "", errors.New(er)
+			u.logger.Info("Код не найден")
+			return "", fmt.Errorf("Code not found")
 		}
 		return "", err
 	}
@@ -145,13 +155,15 @@ func (u *UserRepository) ExistCodeInUserRep(chatID int64) (bool, error) {
 	err := row.Scan(&chat, &code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Строка с заданным ID не найдена
+			u.logger.Info("Строка с заданным chatID не найдена")
 			return false, nil
 		}
+		u.logger.Error("Ошибка в функции row.Scan ", err)
 		return false, err
 	}
 
 	if code.Valid {
+		u.logger.Info("Код обнаружен в базе пользователей")
 		return true, nil
 	}
 
@@ -167,7 +179,7 @@ func (u *UserRepository) DeleteInfo(chatID int64, fieldName string) (bool, error
 	err := row.Scan(&chat, &field)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Строка с заданным ID не найдена
+			u.logger.Info("Строка с заданным chatID не найдена")
 			return true, nil
 		}
 		return false, err
@@ -183,6 +195,7 @@ func (u *UserRepository) DeleteInfo(chatID int64, fieldName string) (bool, error
 		// _, err = u.userDB.Exec(request, nullstr, chatID)
 		_, err = u.userDB.Exec("DELETE FROM user_repository WHERE chatid = $1", chatID)
 		if err != nil {
+			u.logger.Error("Ошибка в функции u.userDB.Exec ", err)
 			return false, err
 		}
 	}

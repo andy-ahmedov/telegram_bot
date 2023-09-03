@@ -3,16 +3,21 @@ package boltdb
 import (
 	"strconv"
 
+	"github.com/andy-ahmedov/telegram_bot/pkg/logging"
 	"github.com/andy-ahmedov/telegram_bot/pkg/repository"
 	"github.com/boltdb/bolt"
 )
 
 type TokenRepository struct {
-	db *bolt.DB
+	db     *bolt.DB
+	logger *logging.Logger
 }
 
-func NewTokenRepository(db *bolt.DB) *TokenRepository {
-	return &TokenRepository{db: db}
+func NewTokenRepository(db *bolt.DB, logger *logging.Logger) *TokenRepository {
+	return &TokenRepository{
+		db:     db,
+		logger: logger,
+	}
 }
 
 func (r *TokenRepository) Save(phoneNumber string, token string, bucket repository.Bucket) error {
@@ -33,10 +38,12 @@ func (r *TokenRepository) Get(phoneNumber string, bucket repository.Bucket) (str
 	})
 
 	if err != nil {
+		r.logger.Error("Ошибка в функции r.db.View:", err)
 		return "", err
 	}
 
 	if token == "" {
+		r.logger.Info("Токен не найден")
 		return "", nil
 	}
 
