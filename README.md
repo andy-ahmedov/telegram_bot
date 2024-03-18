@@ -1,4 +1,4 @@
-# telegram_bot
+<p align="center"><h>TELEGRAM BOT</h></p>
 
 Алгоритм работы телеграм-бота включает следующие этапы:
 
